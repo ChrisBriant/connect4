@@ -23,7 +23,7 @@ import exit from '../assets/door-open-solid-wh.svg';
 import placeholder from '../assets/placeholder.svg';
 */
 
-//const ENDPOINT = "https://zener-card-server.herokuapp.com/";
+const ENDPOINT = "http://localhost:5000";
 
 function randomNumber(min, max) {
     return Math.floor(Math.random() * (max - min) + min);
@@ -31,12 +31,14 @@ function randomNumber(min, max) {
 
 class UIPanel extends Component {
 
+
   constructor(props) {
     super(props);
     if(this.props.multiPlayer) {
-      var turns = 2;
+      this.initGame();
+      var playerTurn = false;
     } else {
-      var turns = 1;
+      var playerTurn = true;
     }
 
     //Create array for grid
@@ -64,11 +66,12 @@ class UIPanel extends Component {
       playerPickedCard: false,
       playerPick: false,
       cardMessage: "Click draw card to select the first card from the server",
-      turns: turns,
+      //turns: turns,
       otherPlayerVerdict:null,
       results: [],
       grid: grid,
-      playerTurn: true,
+      playerTurn: playerTurn,
+      playerColor: "red",
       rows: [0,1,2,3,4,5],
       //Related to messagebox
       gridWidth:0,
@@ -120,10 +123,73 @@ class UIPanel extends Component {
     });
   }
 
+
   initGame() {
-    /*
+
     var component = this;
     this.socket = socketIOClient.connect(ENDPOINT);
+
+    this.socket.on('socketID', function(playerId) {
+      console.log("Connect");
+      this.emit('connect4',component.state.name);
+      component.setState({playerId:playerId});
+    });
+
+    this.socket.on('pair', function(pair) {
+      console.log(pair,component.state.playerId);
+      if(pair[0].id === component.state.playerId.toString()) {
+        console.log("playrr 1")
+        var playerColor = "red";
+        var playerTurn = true;
+      } else {
+        var playerColor = "yellow";
+        var playerTurn = false;
+      }
+      component.setState({pair:pair,playerColor:playerColor,otherPlayerFound:true,playerTurn:playerTurn});
+    });
+
+    this.socket.on('yourturn', function(grid) {
+      console.log("My Turn");
+      console.log(grid);
+      //Convert grid
+      var newGrid = [];
+      for(var i=1;i<7;i++) {
+        var cols = [];
+        var row = grid[i-1];
+        for(var j=1;j<7;j++) {
+          cols[j] = row[j];
+        }
+        newGrid.push(cols);
+      }
+      component.setState({playerTurn:true,grid:newGrid});
+    });
+
+    this.socket.on('winner', function(playerId) {
+      if(component.state.playerId === playerId) {
+        var message = "Congratulations! You have won"
+      } else {
+        var otherPlayerName = component.state.pair.filter(p => p.id != playerId)[0].name;
+        var message = "Sorry " + otherPlayerName + " has won. Better luck next time";
+      }
+      component.setState({isFinished:true,message:message,displayMessage:"inline-block"});
+    });
+
+
+  }
+
+  /*
+  initGame() {
+
+    var component = this;
+    this.socket = socketIOClient.connect(ENDPOINT);
+
+    this.socket.on('socketID', function() {
+      this.emit('connect4',component.state.name);
+    });
+
+    this.socket.on('pair', function(pair) {
+      console.log(pair);
+    });
 
     this.socket.on('socketID', function() {
       this.emit('new_player',component.state.name,component.props.multiPlayer);
@@ -166,8 +232,7 @@ class UIPanel extends Component {
 
     this.socket.on('turn_change', function() {
     });
-    */
-  }
+  }*/
 
 
 
@@ -186,7 +251,7 @@ class UIPanel extends Component {
 
   handleStart() {
     this.setState({isStart:false}); //,displayMessage:'inline-block',message:'This is a message panel'});
-    this.initGame();
+    //this.initGame();
   }
 
   finish() {
@@ -298,6 +363,7 @@ class UIPanel extends Component {
 
   check4() {
     var grid = this.state.grid;
+    var finished = false;
     //console.log("grid",grid);
     var flipped = this.flipGrid(grid);
     //console.log("flipped",flipped);
@@ -306,13 +372,21 @@ class UIPanel extends Component {
     var diagTransformedTopBottom = this.transformDiagTopBottom(grid);
     //console.log("transformed",diagTransformedTopBottom);
     if(this.checkCols(grid,"col")) {
-      this.setState({isFinished:true});
+      var finished = true;
     } else if(this.checkCols(flipped,"row")) {
-      this.setState({isFinished:true});
+      var finished = true;
     } else if(this.checkCols(diagTransformed,"diag")) {
-      this.setState({isFinished:true});
+      var finished = true;
     } else if(this.checkCols(diagTransformedTopBottom,"diag")) {
-      this.setState({isFinished:true});
+      var finished = true;
+    }
+
+    console.log("Finished",finished)
+    if(this.props.multiPlayer && finished) {
+      alert("Here");
+      this.socket.emit("winner",this.state.playerId,this.state.pair[0].pairId);
+    } else if (!this.props.multiPlayer && finished) {
+      this.setState({isFinished:finished});
     }
     //Check rows
     //var count4 = 1;
@@ -322,6 +396,7 @@ class UIPanel extends Component {
  checkCols(grid,ch) {
    var four = false;
    var winner = null;
+   var won = false;
 
    for(var i=0;i<grid.length;i++) {
      var col = grid[i];
@@ -347,11 +422,17 @@ class UIPanel extends Component {
          if(!winner) {
            //As soon as four is reached there is a winner the game is over
            winner = prev;
+           if(prev === this.state.playerColor) {
+             var iAmWinner = true;
+           } else {
+             var iAmWinner = false;
+           }
+           this.setState({winner:winner,iAmWinner:iAmWinner});
          }
        }
      }
    }
-   return winner;
+   return four;
  }
 
 
@@ -385,6 +466,8 @@ class UIPanel extends Component {
   clickSlot(e) {
     var grid = this.state.grid;
     var playerTurn = this.state.playerTurn;
+    var computerTurn = false;
+    console.log("playerturn",playerTurn);
     var row = Math.floor(e.target.id / 10);
     //var col = e.target.id % 10;
     var grrow = grid[row-1];
@@ -392,6 +475,14 @@ class UIPanel extends Component {
     var firstSlot = grrow[1].slot
 
     if(playerTurn && firstSlot ==="empty") {
+      var computerTurn = true;
+      /*
+      if(this.state.multiPlayer) {
+        var counterColor = this.state.playerColor;
+      } else {
+        counterColor = "red";
+      }*/
+
       for(var i=1;i<7;i++) {
         playerTurn = false;
         var grcol = grrow[i];
@@ -401,19 +492,24 @@ class UIPanel extends Component {
             grrow[i-1].slot = "empty";
           }
           if(grcol.slot === "empty") {
-            grcol.slot = "red";
+            grcol.slot = this.state.playerColor;
           }
           this.setState({grid:grid});
         }
       }
+      if(this.props.multiPlayer) {
+        console.log("Here",this.state.grid);
+
+        this.socket.emit('turntaken',this.state.playerId,this.state.pair[0].pairId,this.state.grid);
+      }
       this.check4();
     } else {
-      playerTurn=true;
+      computerTurn = false;
     }
     if(this.checkFull()) {
       this.setState({isFinished:true});
     } else {
-      if(!this.props.multiPlayer && !playerTurn) {
+      if(!this.props.multiPlayer && computerTurn) {
         //Computer turn
         var rows = this.state.rows;
         var slot = rows[randomNumber(0,rows.length)];
@@ -569,7 +665,7 @@ class UIPanel extends Component {
           </Row>
         </Container>
       )*/
-    } else if(this.state.isFinished && !this.state.playerDisconnect) {
+    /*} else if(this.state.isFinished && !this.state.playerDisconnect) {
       return (
         <Container id="content">
           {messagePanel}
@@ -603,7 +699,7 @@ class UIPanel extends Component {
             <Col><Button onClick={this.goToHome}>Exit</Button></Col>
           </Row>
         </Container>
-      );
+      );*/
     } else if(this.state.isFinished && this.state.playerDisconnect) {
       return (
         <Container id="content">
