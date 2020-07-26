@@ -1,0 +1,34 @@
+
+.panel {
+  position:relative;
+  text-align: center;
+}
+
+#content {
+  position:relative;
+}
+
+.slotcol {
+  padding: 0;
+  margin: 0;
+  display:inline-block;
+}
+
+.slotcol img{
+  padding: 0;
+  margin: 0;
+  display:inline-block;
+}
+
+.slotrow {
+  padding: 0;
+  margin: 0;
+  display:inline-block;
+}
+
+.message-panel {
+  z-index: 2;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
