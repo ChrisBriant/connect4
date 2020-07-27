@@ -8,9 +8,11 @@ var port = process.env.PORT || 5000;
 
 var connect4 = {
   players: [],
-  pairId: 0,
-  pairs: []
+  pairId: 0
+  //pairs: []
 }
+
+var allPlayers = [];
 
 //var players = {};
 //var pairId = 1;
@@ -41,6 +43,8 @@ io.on('connection', function (socket) {
       connect4.pairId++;
     }
     connect4.players.push({id:socket.id,name:name,pairId:connect4.pairId});
+    //Record all players
+    allPlayers.push({id:socket.id,game:'connect4'});
     var pair = connect4.players.filter(p => p.pairId == connect4.pairId);
     console.log(pair);
     if(pair.length > 1) {
@@ -50,21 +54,18 @@ io.on('connection', function (socket) {
       io.to(pair[1].id).emit('pair',pair);
     }
 
-    socket.on('turntaken',function(playerId,pairId,grid) {
+    socket.on('connect4-turntaken',function(playerId,pairId,grid) {
       console.log("TURN");
-      console.log(grid);
       var otherPlayer = connect4.players.filter(p => p.pairId == pairId && p.id != playerId);
 
       //Send updated grid to other player
-      console.log(otherPlayer[0].id);
       io.to(otherPlayer[0].id).emit('yourturn',grid);
     });
 
-    socket.on('winner',function(playerId,pairId) {
+    socket.on('connect4-winner',function(playerId,pairId) {
        var otherPlayer = connect4.players.filter(p => p.pairId == pairId && p.id != playerId);
        io.to(otherPlayer[0].id).emit('winner',playerId);
        io.to(playerId).emit('winner',playerId);
-       console.log("WINNER",playerId,otherPlayer[0].id)
        //Destroy the pair
        var remaining = connect4.players.filter(p => p.pairId != pairId);
        connect4.players = remaining;
@@ -72,73 +73,36 @@ io.on('connection', function (socket) {
   });
 
 
-
+  /*
   socket.on('other_player_start', function (otherPlayer) {
     io.to(otherPlayer).emit('player_found',players[socket.id],true);
-  });
+  });*/
 
   // when a player disconnects, remove them from our players object
   socket.on('disconnect', function () {
-    /*
-    if(players[socket.id].pairId > 0) {
-      if(players[socket.id].pairId in pairs) {
-        var pair = pairs[players[socket.id].pairId];
-        if(pair.length > 1) {
-          if(pair[0].id == socket.id) {
-            var otherId = pair[1].id;
-          } else {
-            var otherId = pair[0].id;
+    console.log('DISCONNECT');
+    var player = allPlayers.filter(p => p.id == socket.id);
+    if(player.length > 0) {
+      if(player[0].game === 'connect4') {
+        var connect4Player = connect4.players.filter(p => p.id == socket.id);
+        if(connect4Player.length > 0) {
+          //Remove player
+          var newConnect4Players = connect4.players.filter(np => np.id != socket.id);
+          connect4.players = newConnect4Players;
+          var newAllPlayers = allPlayers.filter(np => np.id != socket.id);
+          allPlayers = newAllPlayers;
+          //Find paired player if still exists and notify
+          var otherPlayer = newConnect4Players.filter(op => op.pairId == connect4Player[0].pairId);
+          if(otherPlayer.length > 0) {
+              console.log("other",otherPlayer);
+              io.to(otherPlayer[0].id).emit('otherdisconnected');
           }
         }
-        io.to(otherId).emit('finished_game',players[socket.id],true);
-        delete pairs[players[socket.id].pairId];
+        console.log(connect4);
       }
-      delete players[socket.id];
-    } else {
-      delete players[socket.id];
-    }*/
-  });
-
-  socket.on('draw_card', function (id) {
-    //Randomly select the card and signal when ready
-    var cardNo = randomNumber(1,6);
-    players[id].cards.push(cardNo);
-    io.to(id).emit('card_drawn');
-  });
-
-  socket.on('card_drawn',function(cardId,otherId) {
-    players[otherId].cards.push(cardId);
-    io.to(otherId).emit('card_drawn');
-  });
-
-  socket.on('guess_made', function (guess) {
-    var cardId = players[socket.id].cards[players[socket.id].cards.length-1];
-    //Randomly select the card and signal when ready
-    if(guess == cardId) {
-      result = true;
-    } else {
-      result = false;
     }
-    players[socket.id].results.push(result);
-    io.to(socket.id).emit('guess_result',cardId);
   });
 
-  socket.on('player_has_guessed', function (otherId) {
-    var guessResult = players[socket.id].results[players[socket.id].results.length-1];;
-    io.to(otherId).emit('draw_again',guessResult);
-  });
-
-  socket.on('turn_change', function (otherId) {
-    io.to(otherId).emit('turn_change');
-  });
-
-  socket.on('multiplayer_finished', function (otherId,playerInitiated) {
-    if(players[otherId].pairId in pairs) {
-      delete pairs[players[otherId].pairId];
-    }
-    io.to(socket.id).emit('finished_game',players[otherId],playerInitiated);
-    io.to(otherId).emit('finished_game',players[socket.id],playerInitiated);
-  });
 });
 
 

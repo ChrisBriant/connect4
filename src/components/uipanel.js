@@ -54,21 +54,21 @@ class UIPanel extends Component {
     this.state = {
       name: "",
       isStart: true,
-      cardsDisabled: true,
+      //cardsDisabled: true,
       isFinished: false,
-      numberOfCards: 25,
-      drawCount: 0,
-      connected: false,
-      cardDrawn: false,
-      guessMade: false,
-      drawReady: true,
-      otherPlayerFound: false,
-      playerPickedCard: false,
-      playerPick: false,
-      cardMessage: "Click draw card to select the first card from the server",
+      //numberOfCards: 25,
+      //drawCount: 0,
+      //connected: false,
+      //cardDrawn: false,
+      //guessMade: false,
+      //drawReady: true,
+      //otherPlayerFound: false,
+      //playerPickedCard: false,
+      //playerPick: false,
+      //cardMessage: "Click draw card to select the first card from the server",
       //turns: turns,
-      otherPlayerVerdict:null,
-      results: [],
+      //otherPlayerVerdict:null,
+      //results: [],
       grid: grid,
       playerTurn: playerTurn,
       playerColor: "red",
@@ -79,18 +79,19 @@ class UIPanel extends Component {
       displayMessage:'none',
       messageWidth:1,
       messageHeight:1,
-      message: ""
+      message: "",
+      exitVisible: false
     }
-    this.clickCard = this.clickCard.bind(this);
-    this.drawCard = this.drawCard.bind(this);
-    this.handleChangeCardCount = this.handleChangeCardCount.bind(this);
+    //this.clickCard = this.clickCard.bind(this);
+    //this.drawCard = this.drawCard.bind(this);
+    //this.handleChangeCardCount = this.handleChangeCardCount.bind(this);
     this.handleStart = this.handleStart.bind(this);
     this.handleChangeName = this.handleChangeName.bind(this);
     this.goToHome = this.goToHome.bind(this);
     this.initGame = this.initGame.bind(this);
-    this.finish = this.finish.bind(this);
-    this.getCardName = this.getCardName.bind(this);
-    this.getVerdict = this.getVerdict.bind(this);
+    //this.finish = this.finish.bind(this);
+    //this.getCardName = this.getCardName.bind(this);
+    //this.getVerdict = this.getVerdict.bind(this);
     this.scrollToBottom = this.scrollToBottom.bind(this);
     this.hoverSlot = this.hoverSlot.bind(this);
     this.leaveSlot = this.leaveSlot.bind(this);
@@ -98,9 +99,10 @@ class UIPanel extends Component {
   }
 
 
+  /*
   getCardName(id) {
     return null;
-  }
+  }*/
 
   componentDidMount(){
     var gridHeight = document.getElementById('content').clientHeight;
@@ -171,9 +173,15 @@ class UIPanel extends Component {
         var otherPlayerName = component.state.pair.filter(p => p.id != playerId)[0].name;
         var message = "Sorry " + otherPlayerName + " has won. Better luck next time";
       }
-      component.setState({isFinished:true,message:message,displayMessage:"inline-block"});
+      component.setState({isFinished:true,message:message,displayMessage:"inline-block",exitVisible:true});
+      this.disconnect();
     });
 
+    this.socket.on('otherdisconnected', function() {
+      var message = "Sorry, the other player has disconnected";
+      component.setState({isFinished:true,message:message,displayMessage:"inline-block",exitVisible:true});
+      this.disconnect();
+    });
 
   }
 
@@ -235,16 +243,6 @@ class UIPanel extends Component {
   }*/
 
 
-
-  clickCard(e) {
-  }
-
-  drawCard(e) {
-  }
-
-  handleChangeCardCount(e) {
-  }
-
   handleChangeName(e) {
     this.setState({name:e.target.value});
   }
@@ -254,6 +252,7 @@ class UIPanel extends Component {
     //this.initGame();
   }
 
+  /*
   finish() {
     if(this.props.multiPlayer) {
       //Rules for other player dropping out - decided to kick both off and show message
@@ -264,13 +263,10 @@ class UIPanel extends Component {
       var verdict = this.getVerdict(this.state.results.filter(r => r.result).length, this.state.results.length,true);
       this.setState({isFinished:true,verdict:verdict});
     }
-  }
+  }*/
 
   goToHome() {
     this.props.history.push('/')
-  }
-
-  getVerdict(totalCorrect,total,isMe) {
   }
 
 
@@ -383,10 +379,9 @@ class UIPanel extends Component {
 
     console.log("Finished",finished)
     if(this.props.multiPlayer && finished) {
-      alert("Here");
-      this.socket.emit("winner",this.state.playerId,this.state.pair[0].pairId);
+      this.socket.emit("connect4-winner",this.state.playerId,this.state.pair[0].pairId);
     } else if (!this.props.multiPlayer && finished) {
-      this.setState({isFinished:finished});
+      this.setState({isFinished:finished,exitVisible:true});
     }
     //Check rows
     //var count4 = 1;
@@ -500,14 +495,18 @@ class UIPanel extends Component {
       if(this.props.multiPlayer) {
         console.log("Here",this.state.grid);
 
-        this.socket.emit('turntaken',this.state.playerId,this.state.pair[0].pairId,this.state.grid);
+        this.socket.emit('connect4-turntaken',this.state.playerId,this.state.pair[0].pairId,this.state.grid);
       }
       this.check4();
     } else {
       computerTurn = false;
     }
     if(this.checkFull()) {
-      this.setState({isFinished:true});
+      var message = "The grid is full no one has won";
+      this.setState({isFinished:true,exitVisible:true,message:message,displayMessage:"inline-block"});
+      if(this.state.multiPlayer) {
+        this.socket.disconnect();
+      }
     } else {
       if(!this.props.multiPlayer && computerTurn) {
         //Computer turn
@@ -536,7 +535,8 @@ class UIPanel extends Component {
         playerTurn = true;
       }
       if(this.checkFull()) {
-        this.setState({isFinished:true});
+        var message = "The grid is full no one has won";
+        this.setState({isFinished:true,exitVisible:true,message:message,displayMessage:"inline-block"});
       }
     }
     this.setState({playerTurn:playerTurn});
@@ -585,7 +585,12 @@ class UIPanel extends Component {
       </div>;
     }
 
-
+    if(this.state.exitVisible) {
+      var exit =
+      <Row><Col md={2}><Button onClick={this.goToHome}> Exit</Button></Col></Row>;
+    } else {
+      var exit = null;
+    }
 
     /*
     if(!this.props.multiPlayer) {
@@ -635,19 +640,6 @@ class UIPanel extends Component {
               <input value={this.state.name} className="form-control" onChange={this.handleChangeName}/>
             </Col>
           </Row><br/>
-          <Row>
-            <Col md={6}>
-              <label>Select number of tries:</label>
-            </Col>
-            <Col md={3}>
-              <NumericInput min={1} max={100} value={this.state.numberOfCards} onChange={this.handleChangeCardCount}/>
-            </Col>
-            <Col md={3}></Col>
-          </Row>
-          <Row>
-            <Col></Col>
-            <Col><p>25 is the recommended value, for the most accurate results, but you can change this to any number between 1 an 100</p></Col>
-          </Row>
           <Row>
             <Col md={2}><Button onClick={this.handleStart}>START</Button></Col>
             <Col md={2}><Button onClick={this.goToHome}> Exit</Button></Col>
@@ -700,7 +692,7 @@ class UIPanel extends Component {
           </Row>
         </Container>
       );*/
-    } else if(this.state.isFinished && this.state.playerDisconnect) {
+    /*} else if(this.state.isFinished && this.state.playerDisconnect) {
       return (
         <Container id="content">
           {messagePanel}
@@ -714,7 +706,7 @@ class UIPanel extends Component {
             <Col><Button onClick={this.goToHome}>Exit</Button></Col>
           </Row>
         </Container>
-      );
+      );*/
     } else if(this.props.multiPlayer && !this.state.otherPlayerFound) {
       return (
         <Container id="content">
@@ -738,7 +730,7 @@ class UIPanel extends Component {
     } else {
       return (
           //Main Board
-          <Container id="content">{messagePanel}{grid}</Container>
+          <Container id="content">{messagePanel}{grid}{exit}</Container>
       );
     }
   }
