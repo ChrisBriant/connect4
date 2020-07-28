@@ -1,0 +1,9 @@
+/* bigger tablets */
+@media only screen and (max-width: 775px) {
+  .slotrow img {
+    width:50px;
+  }
+}
+
+/*
+*/

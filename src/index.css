@@ -1,4 +1,23 @@
 
+* {
+  margin: 0;
+  padding: 0;
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+}
+
+html,
+body {
+  /*background-color: #f6b93b;*/
+  background-color: #f6c868;
+  color:#ff4600;
+  font-family: 'Lato','Arial',sans-serif;
+  font-size: 22px;
+  font-weight: 300;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
 .panel {
   position:relative;
   text-align: center;
@@ -14,10 +33,19 @@
   display:inline-block;
 }
 
+.buttons{
+  text-align: center;
+  margin: 10px;
+}
+/*
 .slotcol img{
   padding: 0;
   margin: 0;
   display:inline-block;
+}*/
+
+.slotrow img {
+  width:90px;
 }
 
 .slotrow {
@@ -31,4 +59,16 @@
   position: absolute;
   top: 0px;
   left: 0px;
+  background-color:#fefc00;
+  border-radius: 15px;
+  padding: 10px;
+  border: 1px solid #ff4600;
+}
+
+h2 {
+  text-align: center;
+}
+
+.wait-anim {
+  width:100%;
 }

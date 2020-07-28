@@ -43,10 +43,8 @@ class Main extends Component {
               <Col>
                 <br/>
                 <Row>
-                  <Col><h1 className="titletext">Zener ESP Test</h1></Col>
-                  <Col md={2}></Col>
+                  <Col><h2 className="titletext">Line of Four</h2></Col>
                 </Row>
-                <br/><br/>
                 <Row>
                   <Col>
                     <Route exact path="/" render={props => (<Home {...props} setTest={this.setTest}/>)}/>
@@ -55,10 +53,6 @@ class Main extends Component {
                   </Col>
                 </Row>
               </Col>
-            </Row>
-            <Row>
-              <br/>
-              <Col><p className="citation">Icons by <a href="https://fontawesome.com">Font Awesome</a></p></Col>
             </Row>
             <br/>
           </Container>

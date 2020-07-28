@@ -127,7 +127,6 @@ class UIPanel extends Component {
 
 
   initGame() {
-
     var component = this;
     this.socket = socketIOClient.connect(ENDPOINT);
 
@@ -138,21 +137,36 @@ class UIPanel extends Component {
     });
 
     this.socket.on('pair', function(pair) {
+      var message = component.state.message;
+      var displayMessage = component.state.displayMessage;
       console.log(pair,component.state.playerId);
       if(pair[0].id === component.state.playerId.toString()) {
-        console.log("playrr 1")
+        console.log("playrr 1");
+        message = "You Start!";
+        displayMessage = "inline-block";
+        setInterval(function() {
+          component.setState({displayMessage:"none;"});
+        }, 1000);
         var playerColor = "red";
         var playerTurn = true;
       } else {
         var playerColor = "yellow";
         var playerTurn = false;
       }
-      component.setState({pair:pair,playerColor:playerColor,otherPlayerFound:true,playerTurn:playerTurn});
+      component.setState({pair:pair,playerColor:playerColor,otherPlayerFound:true,playerTurn:playerTurn,message:message,displayMessage:displayMessage});
     });
 
     this.socket.on('yourturn', function(grid) {
       console.log("My Turn");
       console.log(grid);
+      //Flash message
+      var message = component.state.message;
+      var displayMessage = component.state.displayMessage;
+      message = "Your Turn!";
+      displayMessage = "inline-block";
+      setInterval(function() {
+        component.setState({displayMessage:"none;"});
+      }, 1000)
       //Convert grid
       var newGrid = [];
       for(var i=1;i<7;i++) {
@@ -163,7 +177,7 @@ class UIPanel extends Component {
         }
         newGrid.push(cols);
       }
-      component.setState({playerTurn:true,grid:newGrid});
+      component.setState({playerTurn:true,grid:newGrid,message:message,displayMessage:displayMessage});
     });
 
     this.socket.on('winner', function(playerId) {
@@ -357,7 +371,7 @@ class UIPanel extends Component {
   }
 
 
-  check4() {
+  check4(human) {
     var grid = this.state.grid;
     var finished = false;
     //console.log("grid",grid);
@@ -381,11 +395,17 @@ class UIPanel extends Component {
     if(this.props.multiPlayer && finished) {
       this.socket.emit("connect4-winner",this.state.playerId,this.state.pair[0].pairId);
     } else if (!this.props.multiPlayer && finished) {
-      this.setState({isFinished:finished,exitVisible:true});
+      if(human) {
+        var message = "Congratulations! You have won";
+      } else {
+        var message = "Sorry, the computer has won";
+      }
+      this.setState({isFinished:finished,exitVisible:true,message:message,displayMessage:"inline-block"});
     }
     //Check rows
     //var count4 = 1;
     //var prev="empty";
+    return finished;
   }
 
  checkCols(grid,ch) {
@@ -497,7 +517,9 @@ class UIPanel extends Component {
 
         this.socket.emit('connect4-turntaken',this.state.playerId,this.state.pair[0].pairId,this.state.grid);
       }
-      this.check4();
+      if(this.check4(true)) {
+        computerTurn = false;
+      }
     } else {
       computerTurn = false;
     }
@@ -531,7 +553,7 @@ class UIPanel extends Component {
             this.setState({grid:grid});
           }
         }
-        this.check4();
+        this.check4(false);
         playerTurn = true;
       }
       if(this.checkFull()) {
@@ -587,7 +609,7 @@ class UIPanel extends Component {
 
     if(this.state.exitVisible) {
       var exit =
-      <Row><Col md={2}><Button onClick={this.goToHome}> Exit</Button></Col></Row>;
+      <div className="buttons"><Button onClick={this.goToHome}>Exit</Button></div>;
     } else {
       var exit = null;
     }
@@ -633,16 +655,20 @@ class UIPanel extends Component {
         <Container id="content">
           {messagePanel}
           <Row>
-            <Col>
+            <Col md={3}></Col>
+            <Col md={3}>
               <label>Enter a nickname:</label>
             </Col>
-            <Col>
+            <Col md={3}>
               <input value={this.state.name} className="form-control" onChange={this.handleChangeName}/>
             </Col>
+            <Col md={3}></Col>
           </Row><br/>
           <Row>
-            <Col md={2}><Button onClick={this.handleStart}>START</Button></Col>
-            <Col md={2}><Button onClick={this.goToHome}> Exit</Button></Col>
+            <Col md={3}></Col>
+            <Col md={3}><Button onClick={this.handleStart}>START</Button></Col>
+            <Col md={3}><Button onClick={this.goToHome}> Exit</Button></Col>
+            <Col md={3}></Col>
           </Row>
         </Container>
       );
@@ -714,7 +740,7 @@ class UIPanel extends Component {
           <Row>
             <Col></Col>
             <Col></Col>
-            <h4>Waiting for other player</h4>
+            <h4>Waiting for another player</h4>
             <Col></Col>
             <Col></Col>
           </Row>
